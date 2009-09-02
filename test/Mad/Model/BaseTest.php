@@ -1107,6 +1107,12 @@ class Mad_Model_BaseTest extends Mad_Test_Unit
         $this->assertEquals("Unrecognized attribute 'nonexistent_attribute'", $e->getMessage());
     }
 
+    // test creating not valid
+    public function testCreateNotValid()
+    {
+        $test = UnitTest::create(array());
+        $this->assertTrue($test instanceof UnitTest);
+    }
 
     /*##########################################################################
     # Test INSERT/UPDATE using save()

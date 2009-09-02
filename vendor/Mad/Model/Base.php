@@ -3090,7 +3090,8 @@ abstract class Mad_Model_Base extends Mad_Support_Object
         // SINGLE
         } else {
             $obj = new $this->_className($attributes);
-            return $obj->save();
+            $obj->save();
+            return $obj;
         }
     }
 
