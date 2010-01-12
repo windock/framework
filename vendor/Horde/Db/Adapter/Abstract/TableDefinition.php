@@ -28,6 +28,9 @@ class Horde_Db_Adapter_Abstract_TableDefinition implements ArrayAccess
     protected $_options = null;
     protected $_columns = null;
 
+    protected $_columntypes = array ('string', 'text', 'integer', 'float',
+        'datetime', 'timestamp', 'time', 'date', 'binary', 'boolean');
+
     /**
      * Class Constructor
      *
@@ -69,7 +72,7 @@ class Horde_Db_Adapter_Abstract_TableDefinition implements ArrayAccess
     }
 
     /**
-     * Instantiates a new column for the table.
+     * Instantiates one or several new columns for the table.
      * The +type+ parameter must be one of the following values:
      * <tt>:primary_key</tt>, <tt>:string</tt>, <tt>:text</tt>,
      * <tt>:integer</tt>, <tt>:float</tt>, <tt>:datetime</tt>,
@@ -105,28 +108,91 @@ class Horde_Db_Adapter_Abstract_TableDefinition implements ArrayAccess
      */
     public function column($name, $type, $options=array())
     {
-        if ($this[$name]) {
-            $column = $this[$name];
-        } else {
-            $column = new Horde_Db_Adapter_Abstract_ColumnDefinition(
-                $this->_base, $name, $type);
+        if (is_array($name)) {
+            foreach ($name as $col)
+              $this->column($col, $type, $options);
         }
+        else {
+            if ($this[$name]) {
+                $column = $this[$name];
+            } else {
+                $column = new Horde_Db_Adapter_Abstract_ColumnDefinition(
+                    $this->_base, $name, $type);
+            }
 
-        $natives = $this->_native();
-        $opt = $options;
+            $natives = $this->_native();
+            $opt = $options;
 
-        if (isset($opt['limit']) || isset($natives[$type])) {
-            $nativeLimit = isset($natives[$type]['limit']) ? $natives[$type]['limit'] : null;
-            $column->setLimit(isset($opt['limit']) ? $opt['limit'] : $nativeLimit);
+            if (isset($opt['limit']) || isset($natives[$type])) {
+                $nativeLimit = isset($natives[$type]['limit']) ? $natives[$type]['limit'] : null;
+                $column->setLimit(isset($opt['limit']) ? $opt['limit'] : $nativeLimit);
+            }
+
+            $column->setPrecision(isset($opt['precision']) ? $opt['precision'] : null);
+            $column->setScale(isset($opt['scale'])         ? $opt['scale']     : null);
+            $column->setDefault(isset($opt['default'])     ? $opt['default']   : null);
+            $column->setNull(isset($opt['null'])           ? $opt['null']      : null);
+
+            $this[$name] ? $this[$name] = $column : $this->_columns[] = $column;
         }
-
-        $column->setPrecision(isset($opt['precision']) ? $opt['precision'] : null);
-        $column->setScale(isset($opt['scale'])         ? $opt['scale']     : null);
-        $column->setDefault(isset($opt['default'])     ? $opt['default']   : null);
-        $column->setNull(isset($opt['null'])           ? $opt['null']      : null);
-
-        $this[$name] ? $this[$name] = $column : $this->_columns[] = $column;
         return $this;
+    }
+
+    /**
+     * Adds created_at and updated_at columns to the table
+     *
+     * This method returns <tt>self</tt>.
+     */
+    public function timestamps()
+    {
+        return $this->column(array('created_at', 'updated_at'), 'datetime');
+    }
+
+    /*
+     * Add one or several references to foreign keys
+     *
+     * This method returns <tt>self</tt>.
+     */
+    public function belongsTo($columns)
+    {
+        if (is_array($columns)) {
+            foreach ($columns as $col)
+              $cols[] = $col . '_id';
+        }
+        else {
+            $cols = $columns . '_id';
+        }
+
+        return $this->column($cols, 'integer');
+    }
+
+    /*
+     * Alias for the belongsTo() method
+     *
+     * This method returns <tt>self</tt>.
+     */
+    public function references($columns)
+    {
+        return $this->belongsTo($columns);
+    }
+
+    /**
+     * Use __call to implement sexy migrations
+     *
+     * This method returns <tt>self</tt>.
+     */
+    public function __call($method, $arguments)
+    {
+        if (!in_array($method, $this->_columntypes)) {
+          throw new BadMethodCallException('Call to undeclared method "'.$method.'"');
+        }
+        else if (count($arguments) > 0 && count($arguments) < 3) {
+          return $this->column($arguments[0], $method, 
+              isset($arguments[1]) ? $arguments[1] : array());
+        }
+        else {
+          throw new BadMethodCallException('Method "'.$method.'" takes two arguments');
+        }
     }
 
     /**

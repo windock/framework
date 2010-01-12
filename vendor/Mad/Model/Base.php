@@ -18,11 +18,6 @@
  *  php ./script/generate.php model {ModelName} {table_name}
  * </code>
  *
- * Each model class has a Mad_Model_DO class that maps it's attributes to the database.
- * This is stored under the /app/mappings directory:
- *  model: /app/models/Folder.php
- *  data object: /app/mappings/FolderDO.php.
- *
  * @category   Mad
  * @package    Mad_Model
  * @copyright  (c) 2007-2009 Maintainable Software, LLC
@@ -1097,6 +1092,24 @@ abstract class Mad_Model_Base extends Mad_Support_Object
         $bt = debug_backtrace();
         $m = new $bt[1]['class'];
         return $m->_find($type, $options, $bindVars);
+    }
+
+
+    /**
+     * A convenience wrapper for find('first'). You can pass in all the
+     *  same arguments to this method as you can to find('first').
+     *
+     * @see Mad_Model_Base::find()
+     *
+     * @param   array $options
+     * @param   array $bindVars
+     */
+    public static function first($options=null, $bindVars=null)
+    {
+        // hack to get name of this class (because of static)
+        $bt = debug_backtrace();
+        $m = new $bt[1]['class'];
+        return $m->_find('first', $options, $bindVars);
     }
 
     /**
